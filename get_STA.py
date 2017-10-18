@@ -129,9 +129,30 @@ def get_sta(spike_times,songs,song_mask, song_ramp,n_t=20):
 			spect_stack = np.concatenate((spect_stack,this_spect_stack),0)
     return spect_stack, f
 
-def visualize_some_stas(neurons,songs,song_mask, song_ramp,n_t=20):
+def visualize_some_stas(neurons,spikes,songs,song_mask, song_ramp,n_t=20):
 	n_use = 4
-    
+	n_done = 0
+	n_bump = 9
+	plt.figure(figsize=(5,1))
+	while n_done <n_use:
+		this_neuron = neurons['cluster'][n_done + n_bump]
+		my_spikes = spikes[spikes['cluster']==this_neuron]
+		spk_times = my_spikes['time_samples'].values
+		
+		if (len(spk_times)<10):
+			n_bump+=1
+			continue
+		STA,f = get_sta(spk_times,songs,song_mask, song_ramp,n_t)
+		
+		mSTA = np.mean(STA,0)
+		plt.subplot(1,n_use,n_done+1)
+		plt.imshow(mSTA)
+		plt.title(this_neuron)
+		if n_done !=0:
+			plt.axis('off')
+		n_done+=1
+
+
 def get_song_mask(trials,ratio):
     song_names = list(set(trials['stimulus']))
     n_song = len(song_names)
