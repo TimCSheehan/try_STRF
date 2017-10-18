@@ -66,14 +66,14 @@ def full_spectrogram(song,fs=44100):
     ss_D = 10*np.log10(ss)
     return f, t, ss_D
 
-def visualize_spectrogram(f,t,dat,clim):
-    plt.pcolormesh(f,t,dat)
+def visualize_spectrogram(t,f,dat,clim = []):
+    set_clim = np.any(clim)
+    plt.pcolormesh(t,f,dat)
     plt.xlabel('Time (s)')
     plt.ylabel('Freq (Hz)')
-    try:
+    if set_clim:
         plt.clim(clim)
-    except:
-        5
+
     plt.colorbar()
     plt.show()
     
@@ -93,10 +93,7 @@ def get_ds_rate(songs):
         ratios[i] = ratio
     my_ratio = np.mean(ratios,dtype=int)
     return my_ratio
-        
-        
-    
-    
+               
 def visualize_reduced_spectrogram(song,clim=[]):
     f, t, dat = reduced_spectrogram(song)
     visualize_spectrogram(t,f,dat,clim)
@@ -105,8 +102,35 @@ def visualize_full_spectrogram(song,clim=[]):
     f, t, dat = full_spectrogram(song)
     visualize_spectrogram(t,f,dat,clim)
 
-def get_song_and_time_from_spike_times(spike_times,trials):
-    5
+def get_sta(spike_times,songs,song_mask, song_ramp,n_t=20):
+    n_song = len(songs)
+    len_mask = len(song_mask)
+    spike_times = spike_times[spike_times<=len_mask]
+    my_song_ind = song_mask[spike_times]
+    my_song_t = song_ramp[spike_times]
+
+    for song_ind in range(n_song):
+        song_spk = my_song_ind == song_ind+1
+        song_t = my_song_t[song_spk]
+        
+        f, _, this_spect = reduced_spectrogram(songs[song_ind]) # 16f x __t
+    	spect_ind = np.where(song_t)
+        this_spect_stack = np.zeros((len(spect_ind[0]),len(f),n_t))
+        for i in range(len(spect_ind)):
+			this_t = song_t[spect_ind[0][i]]
+
+			if this_t < n_t+1:
+				continue
+			this_win = this_spect[:,this_t-n_t:this_t]
+			this_spect_stack[i,:,:] = this_win
+        if song_ind == 0:
+			spect_stack = this_spect_stack
+        else:
+			spect_stack = np.concatenate((spect_stack,this_spect_stack),0)
+    return spect_stack, f
+
+def visualize_some_stas(neurons,songs,song_mask, song_ramp,n_t=20):
+	n_use = 4
     
 def get_song_mask(trials,ratio):
     song_names = list(set(trials['stimulus']))
@@ -114,7 +138,7 @@ def get_song_mask(trials,ratio):
     all_time = trials['stimulus_end'].values[-1]
     
     song_mask = np.zeros(all_time,dtype = np.uint8)
-    song_ramp = np.zeros(all_time)
+    song_ramp = np.zeros(all_time,dtype = np.uint16)
     for i in range(n_song):
         this_song = song_names[i]
         these_trials = trials[trials['stimulus']==this_song]
@@ -122,9 +146,8 @@ def get_song_mask(trials,ratio):
         this_end = these_trials['stimulus_end'].values
         len_song = this_end[0]-this_st[0]
         n_rep = len(this_st)
-        ramp = np.arange(0,len_song,len_song)/ratio
-        ramp.astype(int)
-        print(len_song)
+        ramp = np.arange(0,len_song,1)/ratio
+        ramp = np.int16(ramp)
         for j in range(n_rep):
             song_mask[this_st[j]:this_st[j]+len_song] = i+1
             song_ramp[this_st[j]:this_st[j]+len_song] = ramp
