@@ -152,6 +152,28 @@ def visualize_some_stas(neurons,spikes,songs,song_mask, song_ramp,n_t=20):
 			plt.axis('off')
 		n_done+=1
 
+def get_PSTH(spike_times,song_use,song_mask,song_ramp):
+	
+	len_mask = len(song_mask)
+	len_song = np.max(song_ramp[song_mask==song_use+1])		
+	spike_times = spike_times[spike_times<=len_mask]
+	my_song_ind = song_mask[spike_times]
+	my_song_t = song_ramp[spike_times]
+	
+
+	this_song_len = np.max(song_ramp[song_mask==song_use+1])
+	bins = np.arange(0,this_song_len+1,1)
+	
+	good_t = my_song_t[my_song_ind==song_use+1]
+	PSTH = np.zeros(len_song)	
+	print(len_song)
+	for i in range(len_song):
+		PSTH[i]= sum(good_t==i)
+	PSTH = PSTH/np.max(PSTH)
+	return PSTH
+
+	
+
 
 def get_song_mask(trials,ratio):
     song_names = list(set(trials['stimulus']))
