@@ -55,6 +55,17 @@ def reduced_spectrogram(song,fs=44100):
     ss_Df,f_new = windowed_avg_rows(ss_D,f)
     ss_Dft, t_new = windowed_avg_col(ss_Df,t)
     return f_new, t_new, ss_Dft
+def flat_reduced_spectrogram(song,window, fs = 44100):
+    f_new, t_new, ss_Dft = reduced_spectrogram(song,fs)
+    new_len = len(t_new)-window+1
+    n_feat = len(f_new)*window
+    print(new_len,n_feat)
+    new_spect = np.zeros((n_feat,new_len))
+    for i in range(new_len):
+        this_dat = ss_Dft[:,i:i+window]
+        #this_datT = np.transpose(this_dat)
+        new_spect[:,i] = this_dat.ravel()  
+    return new_spect
 
 def full_spectrogram(song,fs=44100):
     song_d = decimate(song,2,zero_phase = True)
@@ -160,7 +171,6 @@ def get_PSTH(spike_times,song_use,song_mask,song_ramp):
 	my_song_ind = song_mask[spike_times]
 	my_song_t = song_ramp[spike_times]
 	
-
 	this_song_len = np.max(song_ramp[song_mask==song_use+1])
 	bins = np.arange(0,this_song_len+1,1)
 	
@@ -171,8 +181,6 @@ def get_PSTH(spike_times,song_use,song_mask,song_ramp):
 		PSTH[i]= sum(good_t==i)
 	PSTH = PSTH/np.max(PSTH)
 	return PSTH
-
-	
 
 
 def get_song_mask(trials,ratio):
@@ -190,7 +198,7 @@ def get_song_mask(trials,ratio):
         len_song = this_end[0]-this_st[0]
         n_rep = len(this_st)
         ramp = np.arange(0,len_song,1)/ratio
-        ramp = np.int16(ramp)
+        ramp = np.uint16(ramp)
         for j in range(n_rep):
             song_mask[this_st[j]:this_st[j]+len_song] = i+1
             song_ramp[this_st[j]:this_st[j]+len_song] = ramp
