@@ -40,6 +40,12 @@ def windowed_avg_col(dat,t,ms_per_win = 20.0):
     t_new = t[st_points]
     return windowed_avg, t_new
 
+def mean_subtract(dat):
+	# subtracts average of each row from matrix, should always be done on a per-
+	# epoch basis with STA
+	dat_out = np.transpose(np.transpose(dat) - np.mean(dat,1)) #mean subtract    
+	return dat_out
+
 def reduced_spectrogram(song,fs=44100):
     song_d = decimate(song,2,zero_phase = True)
     fs_new = fs/2
@@ -119,20 +125,22 @@ def get_sta(spike_times,songs,song_mask, song_ramp,n_t=20):
     spike_times = spike_times[spike_times<=len_mask]
     my_song_ind = song_mask[spike_times]
     my_song_t = song_ramp[spike_times]
+    ii = 0
 
     for song_ind in range(n_song):
         song_spk = my_song_ind == song_ind+1
-        song_t = my_song_t[song_spk]
-        
+        song_t = my_song_t[song_spk]   
         f, _, this_spect = reduced_spectrogram(songs[song_ind]) # 16f x __t
-    	spect_ind = np.where(song_t)
+        #this_spect = np.transpose(np.transpose(this_spect) - np.mean(this_spect,1)) #mean subtract   
+        #this_spect =  mean_subtract(this_spect)	
+        spect_ind = np.where(song_t)
         this_spect_stack = np.zeros((len(spect_ind[0]),len(f),n_t))
-        for i in range(len(spect_ind)):
+        for i in range(len(spect_ind[0])):
 			this_t = song_t[spect_ind[0][i]]
-
 			if this_t < n_t+1:
 				continue
 			this_win = this_spect[:,this_t-n_t:this_t]
+			this_win = mean_subtract(this_win)
 			this_spect_stack[i,:,:] = this_win
         if song_ind == 0:
 			spect_stack = this_spect_stack
@@ -141,23 +149,26 @@ def get_sta(spike_times,songs,song_mask, song_ramp,n_t=20):
     return spect_stack, f
 
 def visualize_some_stas(neurons,spikes,songs,song_mask, song_ramp,n_t=20):
-	n_use = 4
+	n_use = 10
 	n_done = 0
-	n_bump = 9
-	plt.figure(figsize=(5,1))
+	n_bump = 3
+	n_row = 2
+	n_col = n_use/n_row
+	ptl_use = 90
+	plt.figure(figsize=(n_col*2,n_row*2))
 	while n_done <n_use:
 		this_neuron = neurons['cluster'][n_done + n_bump]
 		my_spikes = spikes[spikes['cluster']==this_neuron]
 		spk_times = my_spikes['time_samples'].values
-		
 		if (len(spk_times)<10):
 			n_bump+=1
 			continue
 		STA,f = get_sta(spk_times,songs,song_mask, song_ramp,n_t)
-		
 		mSTA = np.mean(STA,0)
-		plt.subplot(1,n_use,n_done+1)
-		plt.imshow(mSTA)
+		plt.subplot(n_row,n_col,n_done+1)
+		#cm = np.percentile(np.abs(mSTA),ptl_use)
+		#cm_p = np.percentile((mSTA),ptl_use)
+		plt.imshow(mSTA) # ,clim=(-cm, cm)
 		plt.title(this_neuron)
 		if n_done !=0:
 			plt.axis('off')
@@ -203,8 +214,7 @@ def get_song_mask(trials,ratio):
             song_mask[this_st[j]:this_st[j]+len_song] = i+1
             song_ramp[this_st[j]:this_st[j]+len_song] = ramp
     return song_mask, song_ramp
-        
-    
+
 def get_STA_from_points(spike_times,this_end,ev_len,song,prt = 1,window = 20):
     # spikes should be ms times of spikes
     # ev_end_times should be starts
