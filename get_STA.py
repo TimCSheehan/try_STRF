@@ -65,13 +65,23 @@ def flat_reduced_spectrogram(song,window, fs = 44100):
     f_new, t_new, ss_Dft = reduced_spectrogram(song,fs)
     new_len = len(t_new)-window+1
     n_feat = len(f_new)*window
-    print(new_len,n_feat)
+    #print(new_len,n_feat)
     new_spect = np.zeros((n_feat,new_len))
     for i in range(new_len):
         this_dat = ss_Dft[:,i:i+window]
         #this_datT = np.transpose(this_dat)
         new_spect[:,i] = this_dat.ravel()  
     return new_spect
+def flat_reduced_spectrograms_ms(songs,window, fs = 44100):
+	n_songs = len(songs)
+	for s in range(n_songs):
+		this_spect = flat_reduced_spectrogram(songs[s],window)
+		if s == 0:
+			my_stack = this_spect
+		else:
+			my_stack = np.hstack((my_stack,this_spect))
+	stack_out = mean_subtract(my_stack)
+	return stack_out
 
 def full_spectrogram(song,fs=44100):
     song_d = decimate(song,2,zero_phase = True)
@@ -119,7 +129,7 @@ def visualize_full_spectrogram(song,clim=[]):
     f, t, dat = full_spectrogram(song)
     visualize_spectrogram(t,f,dat,clim)
 
-def get_sta(spike_times,songs,song_mask, song_ramp,n_t=20):
+def get_sta(spike_times,songs,song_mask, song_ramp,n_t=20,d_sta=False):
     n_song = len(songs)
     len_mask = len(song_mask)
     spike_times = spike_times[spike_times<=len_mask]
@@ -131,8 +141,6 @@ def get_sta(spike_times,songs,song_mask, song_ramp,n_t=20):
         song_spk = my_song_ind == song_ind+1
         song_t = my_song_t[song_spk]   
         f, _, this_spect = reduced_spectrogram(songs[song_ind]) # 16f x __t
-        #this_spect = np.transpose(np.transpose(this_spect) - np.mean(this_spect,1)) #mean subtract   
-        #this_spect =  mean_subtract(this_spect)	
         spect_ind = np.where(song_t)
         this_spect_stack = np.zeros((len(spect_ind[0]),len(f),n_t))
         for i in range(len(spect_ind[0])):
