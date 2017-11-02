@@ -116,7 +116,7 @@ def get_ds_rate(songs):
         del _
         len_spect = len(t)
         ratio =len_song/len_spect
-        print(len_song,len_spect,ratio)
+        #print(len_song,len_spect,ratio)
         ratios[i] = ratio
     my_ratio = np.mean(ratios,dtype=int)
     return my_ratio
